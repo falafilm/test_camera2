@@ -1,85 +1,114 @@
 import cv2
 import numpy as np
+import os
+from datetime import datetime
 
-# 1. กำหนด Index ของกล้องทั้ง 4 ตัว (เช่น 0, 1, 2, 3)
-CAM_INDEXES = [0, 1, 2, 3]
-
-# กำหนดขนาดหน้าต่าง Preview รวมที่จะแสดงบนจอโน้ตบุ๊ก (เช่น Full HD)
-PREVIEW_WIDTH = 1280
-PREVIEW_HEIGHT = 720
-
-# ขนาดของกล้องแต่ละตัวในตาราง 2x2 (คือขนาดพรีวิวรวมหารสอง)
-SUB_WIDTH = PREVIEW_WIDTH // 2   # 640
-SUB_HEIGHT = PREVIEW_HEIGHT // 2 # 360
-
-# 2. เชื่อมต่อกล้องทุกตัว
-caps = []
-for idx in CAM_INDEXES:
-    # แนะนำใช้ CAP_DSHOW บน Windows เพื่อให้เปิดกล้องได้เร็ว
-    cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+# 1. ฟังก์ชันสแกนหา Index กล้องที่ต่ออยู่และส่งสัญญาณภาพได้จริง
+def get_available_camera_indices(needed_count=2, max_test=10):
+    available_indices = []
+    print("กำลังสแกนหา Index ของกล้องในระบบ...")
     
-    # เพื่อให้พรีวิวสดลื่นไหล ไม่กินแบนด์วิดท์ USB มากเกินไป
-    # เราจะตั้งความละเอียดตอนพรีวิวไว้แค่พอดีดู (เช่น HD)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    for idx in range(max_test):
+        cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, _ = cap.read()
+            if ret:
+                print(f" -> พบกล้องที่ใช้งานได้ที่ Index {idx}")
+                available_indices.append(idx)
+            cap.release()
+            
+            # ถ้าเจอจำนวนกล้องตามที่ต้องการแล้ว ให้หยุดสแกนทันทีเพื่อประหยัดเวลา
+            if len(available_indices) == needed_count:
+                break
+
+    return available_indices
+
+# --- เริ่มสแกนหากล้อง 2 ตัวที่ใช้งานได้ ---
+CAM_INDEXES = get_available_camera_indices(needed_count=2)
+
+if len(CAM_INDEXES) < 2:
+    print(f"\n Error: พบกล้องที่ใช้งานได้เพียง {len(CAM_INDEXES)} ตัว (ต้องการ 2 ตัว)")
+    print(" โปรดตรวจสอบว่าปิดโปรแกรมอื่นที่ใช้กล้องอยู่หรือยัง หรือย้ายพอร์ต USB")
+    exit()
+
+print(f"\n เลือกใช้งานกล้อง Index: {CAM_INDEXES}\n")
+
+# 2. ตั้งค่าโฟลเดอร์สำหรับเซฟภาพ
+SAVE_DIR = r"D:\DEVELOPERS\test cam\captured_images_2cam_4k"
+
+CAM_DIR = []
+for i in range(len(CAM_INDEXES)):
+    cam_folder = os.path.join(SAVE_DIR, f"CAM_{i+1}")
+    os.makedirs(cam_folder, exist_ok=True)
+    CAM_DIR.append(cam_folder)
+
+# 3. ฟังก์ชันตั้งค่ากล้องเป็น 4K + MJPG
+def setup_camera_4k(cam_index):
+    cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
     
-    if cap.isOpened():
-        print(f"เชื่อมต่อ Cam {idx} สำเร็จ")
-        caps.append((idx, cap))
-    else:
-        print(f"Error: ไม่สามารถเปิด Cam {idx} ได้")
+    # [สำคัญ] บังคับ MJPG ก่อนตั้ง Resolution
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 3840)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
+    cap.set(cv2.CAP_PROP_FPS, 30)
+    
+    return cap
 
-if len(caps) < 4:
-    print("Error: พบกล้องไม่ครบ 4 ตัว โปรดตรวจสอบการเชื่อมต่อ")
-    # แม้ไม่ครบก็ทำงานต่อเท่าที่พบ หรือจะ exit() ก็ได้
-    # exit()
+# เปิดกล้องจาก Index ที่สแกนเจออัตโนมัติ
+cam1 = setup_camera_4k(CAM_INDEXES[0])
+cam2 = setup_camera_4k(CAM_INDEXES[1])
 
-print("\n=== ระบบ Live Preview 4 กล้อง พร้อมใช้งาน ===")
-print("มองที่หน้าต่าง '4-Camera Master Preview' เพื่อดูภาพสดพร้อมกัน")
-print("กด 'Q' เพื่อปิดโปรแกรม\n")
+if not cam1 or not cam2 or not cam1.isOpened() or not cam2.isOpened():
+    print("ไม่สามารถเปิดกล้องครบทั้งสองตัวได้")
+    if cam1: cam1.release()
+    if cam2: cam2.release()
+    exit()
+
+print("=== ระบบพร้อมทำงาน (กด SPACEBAR เพื่อถ่ายภาพ 4K / กด 'q' เพื่อออก) ===")
 
 while True:
-    previews = []
+    ret1, frame1 = cam1.read()
+    ret2, frame2 = cam2.read()
     
-    # 3. [Loop อ่านและจัดเตรียมภาพพรีวิว]
-    for idx, cap in caps:
-        ret, frame = cap.read()
-        if ret:
-            # ย่อขนาดภาพสดของกล้องตัวนี้ให้พอดีกับช่องในตาราง 2x2
-            resized_frame = cv2.resize(frame, (SUB_WIDTH, SUB_HEIGHT))
-            
-            # ใส่หมายเลขกล้องกำกับไว้มุมภาพ จะได้รู้ว่าตัวไหนเป็นตัวไหน
-            cv2.putText(resized_frame, f"CAM {idx}", (20, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-            
-            previews.append(resized_frame)
-        else:
-            # หากกล้องบางตัวดึงภาพไม่ได้ ให้สร้างภาพสีดำเปล่าๆ มาวางแทน
-            black_frame = np.zeros((SUB_HEIGHT, SUB_WIDTH, 3), np.uint8)
-            cv2.putText(black_frame, f"CAM {idx} LOST", (20, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-            previews.append(black_frame)
-
-    # 4. [STACKING - รวมภาพเป็นตาราง 2x2]
-    # (ต้องมั่นใจว่ามีภาพครบ 4 ภาพใน list previews)
-    if len(previews) >= 4:
-        # ต่อภาพคู่บน (Cam1 + Cam2) ในแนวนอน
-        top_row = np.hstack((previews[0], previews[1]))
+    if not ret1 or not ret2:
+        print("อ่านค่าจากกล้องไม่ได้")
+        break
+    
+    preview_h = 540
+    preview_w = 960
+    
+    prev1 = cv2.resize(frame1, (preview_w, preview_h))
+    prev2 = cv2.resize(frame2, (preview_w, preview_h))
+    
+    combined_preview = np.hstack((prev1, prev2))
+    
+    # แสดง Index บนหน้าจอ Preview เพื่อให้ทราบว่า CAM 1 และ 2 ดึงมาจาก Index ไหน
+    cv2.putText(combined_preview, f"CAM 1 (Index {CAM_INDEXES[0]})", (20, 40), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(combined_preview, f"CAM 2 (Index {CAM_INDEXES[1]})", (preview_w + 20, 40), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    
+    cv2.imshow("2-Combined Preview", combined_preview)
+    
+    key = cv2.waitKey(1) & 0xFF
+    
+    if key == ord(' '):
+        # [แก้ไขแล้ว] เรียกใช้ datetime.now() โดยตรง
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # ต่อภาพคู่ล่าง (Cam3 + Cam4) ในแนวนอน
-        bottom_row = np.hstack((previews[2], previews[3]))
+        path1 = os.path.join(CAM_DIR[0], f"CAM1_{timestamp}.jpg")
+        path2 = os.path.join(CAM_DIR[1], f"CAM2_{timestamp}.jpg")
         
-        # นำแถวบนและแถวล่างมาต่อกันในแนวตั้ง -> ได้ตาราง 2x2 สมบูรณ์
-        grid_preview = np.vstack((top_row, bottom_row))
+        cv2.imwrite(path1, frame1)
+        cv2.imwrite(path2, frame2)
+        
+        print(f"[{timestamp}] เซฟรูปภาพเรียบร้อย:")
+        print(f" - {path1}")
+        print(f" - {path2}\n")
 
-        # 5. [แสดงผล] นำภาพตารางรวมไปแสดงในหน้าต่างเดียว
-        cv2.imshow("4-Camera Master Preview", grid_preview)
-
-    # กด 'q' เพื่อออกจากลูปและปิดโปรแกรม
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    elif key == ord('q'):
         break
 
-# ปิดกล้องและหน้าต่างทั้งหมด
-for _, cap in caps:
-    cap.release()
+cam1.release()
+cam2.release()
 cv2.destroyAllWindows()
