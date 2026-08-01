@@ -93,7 +93,8 @@ while True:
     
     if key == ord(' '):
         
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # ✅ แก้เป็นแบบนี้
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         cv2.imwrite(os.path.join(CAM_DIR[0], f"CAM1_{timestamp}.jpg"), frame1)
         cv2.imwrite(os.path.join(CAM_DIR[1], f"CAM2_{timestamp}.jpg"), frame2)
