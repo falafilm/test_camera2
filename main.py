@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import sys
 from datetime import datetime
 
 # check index camera
@@ -30,7 +31,7 @@ CAM_INDEXES = get_available_camera_indices(needed_count=2)
 if len(CAM_INDEXES) < 2:
     print(f"\n Error: พบกล้องที่ใช้งานได้เพียง {len(CAM_INDEXES)} ตัว (ต้องการ 2 ตัว)")
     print(" โปรดตรวจสอบว่าปิดโปรแกรมอื่นที่ใช้กล้องอยู่หรือยัง หรือย้ายพอร์ต USB")
-    exit()
+    sys.exit()
 
 print(f"\n เลือกใช้งานกล้อง Index: {CAM_INDEXES}\n")
 
@@ -62,7 +63,7 @@ cam2 = setup_camera_4k(CAM_INDEXES[1])
 
 if not cam1 or not cam2 or not cam1.isOpened() or not cam2.isOpened():
     print("ไม่สมารถเปิดกล้องครบทั้งสองได้")
-    exit()
+    sys.exit()
     
 while True:
     ret1, frame1 = cam1.read()
