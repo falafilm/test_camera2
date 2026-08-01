@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.14'
+        python-version: '3.14' # แนะนำ 3.12 หรือ 3.14
 
     - name: Install Dependencies
       run: |
@@ -25,7 +25,7 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole --clean main.py
+        pyinstaller --onefile --noconsole --collect-all cv2 --collect-all numpy --clean main.py
 
     - name: Upload EXE File
       uses: actions/upload-artifact@v4
