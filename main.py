@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import os
 import sys
-from datetime import datetime
+import datetime
 
 # check index camera
 # 1. ฟังก์ชันสแกนหา Index กล้องที่ต่ออยู่และส่งสัญญาณภาพได้จริง
