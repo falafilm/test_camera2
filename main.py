@@ -36,7 +36,7 @@ if len(CAM_INDEXES) < 2:
 print(f"\n เลือกใช้งานกล้อง Index: {CAM_INDEXES}\n")
 
 
-# CAM_INDEXES = [0, 1]
+# CAM_INDEXES = [0, 1] --. index
 
 SAVE_DIR = r"D:\SAVECAM\captured_images_2cam_4k"
 
