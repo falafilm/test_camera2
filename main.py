@@ -37,7 +37,7 @@ print(f"\n เลือกใช้งานกล้อง Index: {CAM_INDEXES}
 
 CAM_INDEXES = [0, 1]
 
-SAVE_DIR = r"D:\DEVELOPERS\test cam\captured_images_2cam_4k"
+SAVE_DIR = r"D:\SAVECAM\captured_images_2cam_4k"
 
 if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
