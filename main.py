@@ -3,6 +3,38 @@ import numpy as np
 import os
 from datetime import datetime
 
+# check index camera
+# 1. ฟังก์ชันสแกนหา Index กล้องที่ต่ออยู่และส่งสัญญาณภาพได้จริง
+def get_available_camera_indices(needed_count=2, max_test=10):
+    available_indices = []
+    print("กำลังสแกนหา Index ของกล้องในระบบ...")
+    
+    for idx in range(max_test):
+        cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, _ = cap.read()
+            if ret:
+                print(f" -> พบกล้องที่ใช้งานได้ที่ Index {idx}")
+                available_indices.append(idx)
+            cap.release()
+            
+            # ถ้าเจอจำนวนกล้องตามที่ต้องการแล้ว ให้หยุดสแกนทันทีเพื่อประหยัดเวลา
+            if len(available_indices) == needed_count:
+                break
+
+    return available_indices
+
+# --- เริ่มสแกนหากล้อง 2 ตัวที่ใช้งานได้ ---
+CAM_INDEXES = get_available_camera_indices(needed_count=2)
+
+if len(CAM_INDEXES) < 2:
+    print(f"\n Error: พบกล้องที่ใช้งานได้เพียง {len(CAM_INDEXES)} ตัว (ต้องการ 2 ตัว)")
+    print(" โปรดตรวจสอบว่าปิดโปรแกรมอื่นที่ใช้กล้องอยู่หรือยัง หรือย้ายพอร์ต USB")
+    exit()
+
+print(f"\n เลือกใช้งานกล้อง Index: {CAM_INDEXES}\n")
+
+
 CAM_INDEXES = [0, 1]
 
 SAVE_DIR = r"D:\DEVELOPERS\test cam\captured_images_2cam_4k"
@@ -22,7 +54,7 @@ def setup_camera_4k(cam_index):
     
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 3840)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
-    
+    cap.set(cv2.CAP_PROP_FPS, 30)
     return cap
 
 cam1 = setup_camera_4k(CAM_INDEXES[0])
