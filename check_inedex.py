@@ -1,7 +1,7 @@
 import cv2
 
 # check index camera
-for i in range(10):
+for i in range(12):
     cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
     if cap.isOpened():
         print(f"Camera index {i} is working.")
